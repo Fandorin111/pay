@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Payment</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/telegram-web-app/7.0/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .payment-form {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .crypto-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .crypto-option {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .crypto-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .crypto-option.selected {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .crypto-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .amount-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .amount-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .conversion-rate {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .payment-summary {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .summary-row:last-child {
+            margin-bottom: 0;
+            font-weight: 700;
+            font-size: 16px;
+            color: #333;
+            border-top: 1px solid #dee2e6;
+            padding-top: 10px;
+        }
+
+        .pay-button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            margin-bottom: 15px;
+        }
+
+        .pay-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .pay-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .qr-code {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .qr-placeholder {
+            width: 200px;
+            height: 200px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 48px;
+            color: #adb5bd;
+        }
+
+        .wallet-address {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .copy-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-radius: 20px;
+            margin: 20px 0;
+        }
+
+        .success-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Crypto Payment</h1>
+            <p>Быстрая оплата криптовалютой</p>
+        </div>
+
+        <div id="paymentForm" class="payment-form">
+            <div class="form-group">
+                <label class="form-label">Криптовалюта:</label>
+                <div class="crypto-selector">
+                    <div class="crypto-option selected" data-crypto="USDT">
+                        <span class="crypto-icon">₮</span>
+                        USDT (BEP-20)
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Сумма к оплате (USD):</label>
+                <input type="number" class="amount-input" id="amount" placeholder="0.00" min="0.01" step="0.01">
+                <div class="conversion-rate" id="conversionRate">
+                    ≈ 0.00 USDT
+                </div>
+            </div>
+
+            <div class="payment-summary" id="paymentSummary" style="display: none;">
+                <div class="summary-row">
+                    <span>Сумма:</span>
+                    <span id="summaryAmount">$0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Комиссия сервиса:</span>
+                    <span id="networkFee">$0.50</span>
+                </div>
+                <div class="summary-row">
+                    <span>Итого:</span>
+                    <span id="totalAmount">$0.00</span>
+                </div>
+            </div>
+
+            <button class="pay-button" id="payButton" disabled>
+                Продолжить оплату
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Генерация адреса кошелька...</p>
+        </div>
+
+        <div class="qr-code" id="qrCode">
+            <h3>Адрес для оплаты</h3>
+            <div class="qr-placeholder">💳</div>
+            <p>Отправьте криптовалюту на адрес:</p>
+            <div class="wallet-address" id="walletAddress">
+                1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+            </div>
+            <button class="copy-button" onclick="copyAddress()">Копировать адрес</button>
+            <p style="margin-top: 15px; font-size: 14px; color: #666;">
+                Отправьте точно <strong id="cryptoAmount">0.00 USDT</strong><br>
+                <span style="color: #ff6b6b; font-weight: bold;">⚠️ Только сеть BEP-20 (BSC)!</span>
+            </p>
+            <button class="pay-button" onclick="confirmPayment()" style="margin-top: 20px; background: #28a745;">
+                Я отправил платеж
+            </button>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            <div class="success-icon">📨</div>
+            <h3>Платеж отправлен!</h3>
+            <p>Мы проверим поступление средств и свяжемся с вами</p>
+        </div>
+    </div>
+
+    <script>
+        // Telegram WebApp initialization
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+
+        // Фиксированный курс USDT
+        const crypteRates = {
+            USDT: 1
+        };
+
+        let selectedCrypto = 'USDT';
+        let currentAmount = 0;
+
+        // Crypto selection
+        document.querySelectorAll('.crypto-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.crypto-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedCrypto = this.dataset.crypto;
+                updateConversion();
+            });
+        });
+
+        // Amount input
+        document.getElementById('amount').addEventListener('input', function() {
+            currentAmount = parseFloat(this.value) || 0;
+            updateConversion();
+            updatePaymentSummary();
+            
+            const payButton = document.getElementById('payButton');
+            payButton.disabled = currentAmount <= 0;
+        });
+
+        function updateConversion() {
+            const cryptoAmount = currentAmount; // USDT = 1:1 к доллару
+            const conversionElement = document.getElementById('conversionRate');
+            conversionElement.textContent = `≈ ${cryptoAmount.toFixed(2)} ${selectedCrypto}`;
+        }
+
+        function updatePaymentSummary() {
+            const summary = document.getElementById('paymentSummary');
+            if (currentAmount > 0) {
+                summary.style.display = 'block';
+                
+                const fee = 2.00; // Фиксированная комиссия BEP-20
+                const total = currentAmount + fee;
+                
+                document.getElementById('summaryAmount').textContent = `${currentAmount.toFixed(2)}`;
+                document.getElementById('networkFee').textContent = `${fee.toFixed(2)}`;
+                document.getElementById('totalAmount').textContent = `${total.toFixed(2)}`;
+            } else {
+                summary.style.display = 'none';
+            }
+        }
+
+        // Payment process
+        document.getElementById('payButton').addEventListener('click', function() {
+            document.getElementById('paymentForm').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            
+            // Simulate wallet address generation
+            setTimeout(() => {
+                showQRCode();
+            }, 2000);
+        });
+
+        function showQRCode() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('qrCode').style.display = 'block';
+            
+        // Ваш адрес USDT (BEP-20)
+        const walletAddresses = {
+            USDT: '0x2F1EE30FB1Fe9cb9f87723541D3eF022968FFa4D'
+        };
+            
+            const rate = crypteRates[selectedCrypto];
+            const networkFees = {
+                BTC: 5.00,
+                ETH: 8.00,
+                USDT: 3.00,
+                BNB: 1.50
+            };
+            
+            const totalUSD = currentAmount + networkFees[selectedCrypto];
+            const cryptoAmount = totalUSD / rate;
+            
+            document.getElementById('walletAddress').textContent = walletAddresses[selectedCrypto];
+            document.getElementById('cryptoAmount').textContent = 
+                `${cryptoAmount.toFixed(selectedCrypto === 'USDT' ? 2 : 8)} ${selectedCrypto}`;
+            
+            // Simulate payment confirmation after 10 seconds
+            setTimeout(() => {
+                showSuccess();
+            }, 10000);
+        }
+
+        function copyAddress() {
+            const address = document.getElementById('walletAddress').textContent;
+            navigator.clipboard.writeText(address).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Скопировано!';
+                button.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '#28a745';
+                }, 2000);
+            });
+        }
+
+        function confirmPayment() {
+            showSuccess();
+        }
+
+        function showSuccess() {
+            document.getElementById('qrCode').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'block';
+            
+            // Уведомить Telegram приложение если доступно
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert('Спасибо! Мы проверим ваш платеж.');
+                // Отправить данные боту
+                window.Telegram.WebApp.sendData(JSON.stringify({
+                    amount: currentAmount,
+                    crypto: selectedCrypto,
+                    address: walletAddresses[selectedCrypto],
+                    status: 'payment_sent'
+                }));
+            }
+        }
+
+        // Initialize
+        updateConversion();
+    </script>
+</body>
+</html>
